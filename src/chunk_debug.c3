@@ -102,8 +102,6 @@ fn void Prototype.print_code(Prototype* self) {
   }
 }
 
-
-
 fn void Prototype.print_detail(Prototype* self) {
   io::printfn("constants (%d):", self.constants.len);
   foreach(index, constant : self.constants) {
@@ -145,14 +143,10 @@ fn String Constant.to_string(Constant* self) @private {
       }
     }
     case TagValue.INTEGER: {
-      DString str = dstring::temp();
-      str.appendf("%d", self.as_integer);
-      return str.tcopy_str();
+      return string::tformat("%d", self.as_integer);
     }
     case TagValue.NUMBER: {
-      DString str = dstring::temp();
-      str.appendf("%f", self.as_integer);
-      return str.tcopy_str();
+      return string::tformat("%d", self.as_number);
     }
     case TagValue.SHORT_STR: {
       return self.as_str;

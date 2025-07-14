@@ -2,6 +2,7 @@ module yue;
 import std::io;
 import chunk;
 import reader;
+import state;
 
 fn int main(String[] args)
 {
