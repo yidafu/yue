@@ -1,5 +1,7 @@
 module state;
 
+import number;
+
 enum LuaValueType : int (String desc) {
   LUA_TNONE = "no value",
   LUA_TNIL = "nil",
@@ -25,7 +27,48 @@ struct LuaValue {
   }
 }
 
-fn LuaValueType typeOf(LuaValue value) {
+fn LuaValue? LuaValue.convert_to_double(&self) {
+  switch(self.type) {
+    case LuaValueType.LUA_TNUMBER: {
+      return *self;
+    }
+    case LuaValueType.LUA_TINTEGER: {
+      return lua_number((double) self.as_integer);
+    }
+    case LuaValueType.LUA_TSTRING: {
+      return lua_number(number::parse_intger(self.as_str));
+    }
+    default: {
+      return TYPE_MISS_MATCH?;
+    }
+  }
+}
+
+
+fn LuaValue? LuaValue.convert_to_long(&self) {
+  switch(self.type) {
+    case LuaValueType.LUA_TNUMBER: {
+      return lua_integer(number::double_to_long(self.as_number));
+    }
+    case LuaValueType.LUA_TINTEGER: {
+      return *self;
+    }
+    case LuaValueType.LUA_TSTRING: {
+      long? long_value = number::string_to_long(self.as_str);
+      if (try long_value) {
+        return lua_integer(long_value);
+      }
+      return lua_integer(0);
+    }
+    default: {
+      return TYPE_MISS_MATCH?;
+    }
+  }
+}
+
+
+
+macro LuaValueType type_of(LuaValue value) {
   return value.type;
 }
 
@@ -78,4 +121,16 @@ macro LuaValue LuaValue.to_bool(&self) {
   }
 }
 
+fn int string_compare(String a, String b) {
+  usz min_len = min(a.len, b.len);
+  if (min_len == 0) {
+    return b.len - a.len;
+  }
+  for(int i = 0; i < min_len; i++) {
+    if (a[i] != b[i]) {
+      return a[i] - b[i];
+    }
+  }
+  return a[min_len] - b[min_len];
+}
 faultdef TYPE_MISS_MATCH;
