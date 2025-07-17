@@ -17,8 +17,8 @@ fn String Instruction.op_name(Instruction self) {
 
 fn int[<3>] Instruction.a_b_c(self) {
   int a = (self >> 6 & 0xff);
-  int b = (self >> 14 & 0x1ff);
-  int c = (self >> 23 & 0x1fff);
+  int c = (self >> 14 & 0x1ff);
+  int b = (self >> 23 & 0x1ff);
   return {a, b, c};
 }
 
