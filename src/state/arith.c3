@@ -104,7 +104,7 @@ fn void init_map() @init {
 
 
 // ======= arith method =======
-fn void LuaState.arith(&self, ArithOp operator) {
+fn void LuaState.arith(&self, ArithOp operator) @inline {
   LuaValue b = self.stack.pop()!!;
   LuaValue a;
   if (operator != ArithOp.LUA_OPPOW && operator != ArithOp.LUA_OPBNOT) {
@@ -121,7 +121,7 @@ fn void LuaState.arith(&self, ArithOp operator) {
   }
   unreachable("arithmetic errror!");
 }
-fn bool LuaState.compare(&self,int idx1, int idx2, CompareOp operator) {
+fn bool LuaState.compare(&self,int idx1, int idx2, CompareOp operator) @inline {
   LuaValue a = self.stack._get(idx1);
   LuaValue b = self.stack._get(idx2);
   switch(operator) {
@@ -161,7 +161,7 @@ fn void LuaState.concat(&self, int n) {
 }
 // ======= arith method =======
 
-fn LuaValue? arith_fn(LuaValue a, LuaValue b, BinaryOperator op) {
+fn LuaValue? arith_fn(LuaValue a, LuaValue b, BinaryOperator op) @inline {
 
   if (op.double_fn == null) { // bitwise
     LuaValue? x = a.convert_to_long();
@@ -199,7 +199,7 @@ fn LuaValue? arith_fn(LuaValue a, LuaValue b, BinaryOperator op) {
   return INVLID_OPERATOR?;
 }
 
-fn bool equal(LuaValue a, LuaValue b) {
+fn bool equal(LuaValue a, LuaValue b) @inline {
   switch(a.type) {
     case LuaValueType.LUA_TNIL: {
       return b.type == LuaValueType.LUA_TNIL;
@@ -231,7 +231,7 @@ fn bool equal(LuaValue a, LuaValue b) {
   }
 }
 
-fn bool less_then(LuaValue a, LuaValue b) {
+fn bool less_then(LuaValue a, LuaValue b) @inline {
   switch(a.type) {
     case LuaValueType.LUA_TSTRING: {
       switch(b.type) {
@@ -266,7 +266,7 @@ fn bool less_then(LuaValue a, LuaValue b) {
   unreachable("comparision error!");
   // return false;
 }
-fn bool less_equal(LuaValue a, LuaValue b) {
+fn bool less_equal(LuaValue a, LuaValue b) @inline {
  switch(a.type) {
     case LuaValueType.LUA_TSTRING: {
       switch(b.type) {

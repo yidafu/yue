@@ -11,7 +11,7 @@ fn bool ListLuaValue.is_valid(&self, int index) @private {
   return abs_idx > 0 && abs_idx <= self.len();
 }
 fn int ListLuaValue.abs_index(&self, int index) @private {
-  if (index > 0) {
+  if (index >= 0) {
     return index;
   }
   // io::printf("{abs idx %d len %d}", index, self.len());
@@ -29,6 +29,7 @@ fn  LuaValue ListLuaValue._get(&self, int index) @private {
 
 fn void ListLuaValue._set(&self, int index, LuaValue value) @private {
   int abs_idx = self.abs_index(index);
+  // io::printfn("set list index %d    abs index %d    len %d", index, abs_idx, self.len());
   if (abs_idx > 0 && abs_idx <= self.len()) {
     self.set((usz)(abs_idx - 1), value);
     return;
@@ -101,19 +102,19 @@ fn void LuaState.rotate(&self, int index, int n) {
   } else {
     middle = p - n - 1;
   }
-  io::printfn("index %d top %d, middle %d, low: %d", index, top, middle, p);
+  // io::printfn("index %d top %d, middle %d, low: %d", index, top, middle, p);
   self.stack._reverse(p, middle);
   self.stack._reverse(middle + 1, top);
   self.stack._reverse(p, top);
 }
 fn void LuaState.set_top(&self, int index) {
   int new_top = (int)self.stack.abs_index(index);
-  io::printfn("new top %d", new_top);
+  // io::printfn("new top %d", new_top);
   if (new_top < 0) {
     unreachable("stack underflow!");
   }
   int n = (int)self.stack.len() - new_top;
-  io::printfn("count %d len %d", n, self.stack.len());
+  // io::printfn("count %d len %d", n, self.stack.len());
   if (n > 0) {
     for (int i = 0; i < n; i ++) {
       self.stack.pop()!!;

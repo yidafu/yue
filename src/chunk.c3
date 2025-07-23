@@ -67,3 +67,25 @@ struct Prototype {
   LocVar[] locVars;
   String[] upvalueNames;
 }
+
+
+fn Constant const_int(long value) {
+  Constant int_value;
+  int_value.tag = TagValue.INTEGER;
+  int_value.as_integer = value;
+  return int_value;
+}
+
+fn Constant const_str(String value) {
+  Constant int_value;
+  int_value.tag = TagValue.SHORT_STR;
+  int_value.as_str = value;
+  return int_value;
+}
+
+fn Constant const_nil() {
+  Constant nil_value;
+  nil_value.tag = TagValue.NIL;
+  return nil_value;
+}
+

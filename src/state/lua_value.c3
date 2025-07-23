@@ -60,6 +60,9 @@ fn LuaValue? LuaValue.convert_to_long(&self) {
       }
       return lua_integer(0);
     }
+    case LuaValueType.LUA_TNIL: {
+      return lua_integer(0);
+    }
     default: {
       return TYPE_MISS_MATCH?;
     }
@@ -133,4 +136,5 @@ fn int string_compare(String a, String b) {
   }
   return a[min_len] - b[min_len];
 }
+
 faultdef TYPE_MISS_MATCH;

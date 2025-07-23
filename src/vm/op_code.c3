@@ -12,6 +12,7 @@ enum OpMode : char (String desc) {
   I_AX = "IAx",
 }
 
+
 enum OpCode : char (String desc, OpMode mode, bool set_a_flag, OpArgMode arg_b_mode, OpArgMode arg_c_mode, bool test_flag) {
   // R(A) := R(B)
   OP_MOVE = { "MOVE", OpMode.IABC, true, OpArgMode.OP_ARG_R, OpArgMode.OP_ARG_N, false},
