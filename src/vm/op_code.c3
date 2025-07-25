@@ -12,10 +12,16 @@ enum OpMode : char (String desc) {
   I_AX = "IAx",
 }
 
-
-enum OpCode : char (String desc, OpMode mode, bool set_a_flag, OpArgMode arg_b_mode, OpArgMode arg_c_mode, bool test_flag) {
+enum OpCode : char (
+	String desc, 
+	OpMode mode, 
+	bool set_a_flag, 
+	OpArgMode arg_b_mode, 
+	OpArgMode arg_c_mode, 
+	bool test_flag,
+) {
   // R(A) := R(B)
-  OP_MOVE = { "MOVE", OpMode.IABC, true, OpArgMode.OP_ARG_R, OpArgMode.OP_ARG_N, false},
+  OP_MOVE = { "MOVE", OpMode.IABC, true, OpArgMode.OP_ARG_R, OpArgMode.OP_ARG_N, false, },
   // R(A) := Kst(Bx)
 	OP_LOADK = { "LOADK", OpMode.IA_BX, true, OpArgMode.OP_ARG_K, OpArgMode.OP_ARG_N, false},
   // R(A) := Kst(extra arg)
@@ -106,8 +112,6 @@ enum OpCode : char (String desc, OpMode mode, bool set_a_flag, OpArgMode arg_b_m
 	OP_CLOSURE = { "CLOSURE", OpMode.IABC, true, OpArgMode.OP_ARG_U, OpArgMode.OP_ARG_N, false},
 // R(A), R(A+1), ..., R(A+B-2) = vararg
 	OP_VARARG = { "VARARG", OpMode.IABC, true, OpArgMode.OP_ARG_U, OpArgMode.OP_ARG_N, false},
-
-
 // extra (larger) argument for previous opcode
 	OP_EXTRAARG = { "EXTRAARG", OpMode.I_AX, false, OpArgMode.OP_ARG_K, OpArgMode.OP_ARG_N, false},
 }

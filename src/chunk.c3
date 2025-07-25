@@ -58,7 +58,7 @@ struct Prototype {
   usz lastLineDefined;
   char numParams;
   char isVararg;
-  char maxStackSize;
+  char max_stack_size;
   uint[] codes;
   Constant[] constants;
   Upvalue[] upvalues;
@@ -89,3 +89,7 @@ fn Constant const_nil() {
   return nil_value;
 }
 
+fn LocVar loc_var(String name, uint s, uint e) {
+  LocVar locVar = { name, s, e };
+  return locVar;
+}

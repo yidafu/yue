@@ -2,14 +2,14 @@ module vm;
 
 import std::io;
 
-fn void LuaVm.move(&self, Instruction i) @inline {
+fn void LuaVm.op_move(&self, Instruction i) @inline {
   int[<3>] abc = i.a_b_c();
   int a = abc[0] + 1;
   int b = abc[1] + 1;
   self.copy(b, a);
 }
 
-fn void LuaVm.jump(&self, Instruction i) @inline {
+fn void LuaVm.op_jump(&self, Instruction i) @inline {
   int[<2>] a_sbx = i.a_sbx();
   self.add_pc(a_sbx[1]);
   if (a_sbx[0] != 0) {
@@ -18,7 +18,7 @@ fn void LuaVm.jump(&self, Instruction i) @inline {
 }
 
 
-fn void LuaVm.load_nil(&self, Instruction i) @inline {
+fn void LuaVm.op_load_nil(&self, Instruction i) @inline {
   int[<3>] abc = i.a_b_c();
   int a= abc[0];
   int b = abc[1];
@@ -33,7 +33,7 @@ fn void LuaVm.load_nil(&self, Instruction i) @inline {
   self.pop(1);
 }
 
-fn void LuaVm.load_bool(&self, Instruction i) @inline {
+fn void LuaVm.op_load_bool(&self, Instruction i) @inline {
   int[<3>] abc = i.a_b_c();
   int a= abc[0];
   int b = abc[1];
@@ -47,7 +47,7 @@ fn void LuaVm.load_bool(&self, Instruction i) @inline {
   }
 }
 
-fn void LuaVm.load_k(&self, Instruction i) @inline {
+fn void LuaVm.op_load_k(&self, Instruction i) @inline {
   int[<2>] a_bx = i.a_bx();
   int a = a_bx[0];
   int bx = a_bx[1];
@@ -59,7 +59,7 @@ fn void LuaVm.load_k(&self, Instruction i) @inline {
 }
 
 
-fn void LuaVm.load_kx(&self, Instruction i) @inline {
+fn void LuaVm.op_load_kx(&self, Instruction i) @inline {
   int[<2>] a_bx = i.a_bx();
   int a = a_bx[0];
   int bx = a_bx[1];

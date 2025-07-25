@@ -35,7 +35,7 @@ fn void Prototype.print_header(Prototype* self) {
     "%d%s params, %d slots %d upvalues",
     self.numParams,
     varvargFlag,
-    self.maxStackSize,
+    self.max_stack_size,
     self.upvalues.len,
   );
   io::printfn(
@@ -98,7 +98,7 @@ fn void Prototype.print_code(Prototype* self) {
           unreachable("unknow op mode");
         }
       }
-      io::printfn("");
+      io::printfn("\t 0x%12x", code);
   }
 }
 
