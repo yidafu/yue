@@ -465,11 +465,6 @@ const testing = std.testing;
 // 内存泄漏测试
 var leak_test_allocator = std.testing.allocator;
 
-// 确保测试中分配的内存被正确释放
-pub fn test_deinit() !void {
-    // 这里可以添加测试代码来验证内存释放
-}
-
 test "read_uint" {
     var reader = BinaryReader{ .bytes = &.{ 0x12, 0x34, 0x56, 0x78 } };
     try testing.expectEqual(@as(u32, 0x78563412), reader.read_uint());
@@ -479,20 +474,20 @@ test "read_ulong" {
     var reader = BinaryReader{ .bytes = &.{ 0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01 } };
     try testing.expectEqual(@as(u64, 0x0123456789ABCDEF), reader.read_ulong());
 
-    reader.bytes = &.{0} ** 8;
+    reader = BinaryReader{ .bytes = ([_]u8{0} ** 8)[0..] };
     try testing.expectEqual(@as(u64, 0), reader.read_ulong());
 
-    reader.bytes = &.{0xFF} ++ &.{0} ** 7;
+    reader = BinaryReader{ .bytes = ([_]u8{0xFF})[0..] ++ ([_]u8{0} ** 7)[0..] };
     try testing.expectEqual(@as(u64, 0xFF), reader.read_ulong());
 
-    reader.bytes = &.{0} ** 7 ++ &.{0xFF};
+    reader = BinaryReader{ .bytes = ([_]u8{0} ** 7)[0..] ++ ([_]u8{0xFF})[0..] };
     try testing.expectEqual(@as(u64, 0xFF00000000000000), reader.read_ulong());
 
-    reader.bytes = &.{ 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
+    reader = BinaryReader{ .bytes = &.{ 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF } };
     try testing.expectEqual(@as(u64, 0xEFCDAB8967452301), reader.read_ulong());
 }
 
 test "read_lua_number" {
     var reader = BinaryReader{ .bytes = &.{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x28, 0x77, 0x40 } };
-    try testing.expectEqual(370.5, reader.read_lua_number());
+    try testing.expectEqual(@as(f64, 370.5), reader.read_lua_number());
 }
