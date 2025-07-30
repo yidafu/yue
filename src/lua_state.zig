@@ -86,8 +86,9 @@ pub const LuaState = struct {
         };
     }
 
-    pub fn free(self: *LuaState) void {
+    pub fn deinit(self: *LuaState, allocator: std.mem.Allocator) void {
         self.stack.deinit();
+        self.proto.deinit(allocator);
     }
 
     /// 获取栈顶索引（Lua风格，从1开始计数）
@@ -101,7 +102,7 @@ pub const LuaState = struct {
     }
 
     /// 检查栈空间（C3动态列表始终返回true）
-    pub fn check_stack(_: *LuaState) bool {
+    pub fn check_stack(_: *LuaState, _: i32) bool {
         return true;
     }
 
@@ -121,7 +122,7 @@ pub const LuaState = struct {
 
     /// 替换指定索引的元素（弹出栈顶值并设置）
     pub fn replace(self: *LuaState, index: i32) void {
-        const value = self.stack.values.pop();
+        const value = self.stack.values.pop() orelse lua_value.lua_nil();
         self.stack.set_value(index, value);
     }
 
@@ -155,6 +156,7 @@ pub const LuaState = struct {
         }
         const current_len = @as(i32, @intCast(self.stack.values.items.len));
         const n = current_len - new_top;
+        std.debug.print("set top {d} -> {d}", .{ n, new_top });
         if (n > 0) {
             var i: i32 = 0;
             while (i < n) : (i += 1) {
@@ -249,7 +251,7 @@ pub const LuaState = struct {
         const value = self.stack.get_value(index);
         return switch (value) {
             .LUA_TINTEGER => |i| i,
-            .number => |n| @as(i64, @intFromFloat(n)),
+            .LUA_TNUMBER => |n| @as(i64, @intFromFloat(n)),
             else => null,
         };
     }
@@ -276,17 +278,17 @@ pub const LuaState = struct {
 
     /// 将指定索引处的值转换为字符串（可选返回）
     pub fn to_string_x(self: *LuaState, index: i32) ?[]const u8 {
-        var value = self.stack.get_value(index);
+        const value = self.stack.get_value(index);
         return switch (value) {
             .LUA_TSTRING => |s| s,
             .LUA_TINTEGER => |i| {
                 const str = std.fmt.allocPrint(self.stack.values.allocator, "{d}", .{i}) catch return null;
-                self.stack.set_value(index, .{ .LUA_TSTRING = str });
+                self.stack.set_value(index, lua_value.lua_string(str));
                 return str;
             },
             .LUA_TNUMBER => |n| {
                 const str = std.fmt.allocPrint(self.stack.values.allocator, "{d}", .{n}) catch return null;
-                self.stack.set_value(index, .{ .LUA_TSTRING = str });
+                self.stack.set_value(index, lua_value.lua_string(str));
                 return str;
             },
             else => null,
@@ -311,6 +313,7 @@ pub const LuaState = struct {
     }
 
     pub fn push_number(self: *LuaState, value: f64) void {
+        std.debug.print("push_number {d}\n", .{value});
         self.stack.append(lua_value.lua_number(value)) catch unreachable;
     }
 
@@ -320,11 +323,28 @@ pub const LuaState = struct {
 
     /// 执行算术操作
     pub fn arith(self: *LuaState, operator: ArithOp) void {
-        const b = self.stack.values.pop();
-        const a = if (operator != .LUA_OPPOW and operator != .LUA_OPBNOT) self.stack.values.pop() else b;
+        const b = self.stack.values.pop() orelse lua_value.lua_nil();
+        const a = (if (operator != .LUA_OPPOW and operator != .LUA_OPBNOT)
+            self.stack.values.pop()
+        else
+            b) orelse lua_value.lua_nil();
         const op = lua_arith.operator_map.get(operator) orelse @panic("invalid operator");
-        const result = lua_arith.arith_fn(a, b, op) catch @panic("arithmetic error");
+        const result = lua_arith.arith_fn(a, b, op) catch |err| {
+            std.debug.print("Arithmetic error: {s}\n", .{@errorName(err)});
+            @panic("arithmetic error");
+        };
         self.stack.values.append(result) catch @panic("out of memory");
+    }
+
+    /// 比较两个值
+    pub fn compare(self: *LuaState, idx1: i32, idx2: i32, op: CompareOp) bool {
+        const a = self.stack.get_value(idx1);
+        const b = self.stack.get_value(idx2);
+        return switch (op) {
+            .LUA_OPEQ => a.equal(b),
+            .LUA_OPLT => a.less_than(b),
+            .LUA_OPLE => a.less_equal(b),
+        };
     }
 
     /// 获取值的长度
@@ -355,17 +375,6 @@ pub const LuaState = struct {
                 }
             }
         }
-    }
-
-    /// 比较两个值
-    pub fn compare(self: *LuaState, idx1: i32, idx2: i32, operator: CompareOp) bool {
-        const a = self.stack.get_value(idx1);
-        const b = self.stack.get_value(idx2);
-        return switch (operator) {
-            .LUA_OPEQ => lua_arith.equal(a, b),
-            .LUA_OPLT => a.less_than(b),
-            .LUA_OPLE => a.less_equal(b),
-        };
     }
 
     /// 打印Lua栈内容

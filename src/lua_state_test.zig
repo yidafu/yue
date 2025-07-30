@@ -17,9 +17,9 @@ fn empty_proto() Prototype {
 }
 test "lua_state_test" {
     const allocator = std.testing.allocator;
-    var proto = empty_proto();
+    const proto = empty_proto();
     var state = new_state(allocator, 32, proto);
-    defer state.free();
+    defer state.deinit(allocator);
 
     state.push_bool(true);
     state.print_stack();
@@ -51,9 +51,9 @@ test "lua_state_test" {
 
 test "lua_state_arith_test" {
     const allocator = std.testing.allocator;
-    var proto = empty_proto();
+    const proto = empty_proto();
     var state = new_state(allocator, 32, proto);
-    defer state.free();
+    defer state.deinit(allocator);
 
     state.push_integer(1);
     state.push_string("2.0");

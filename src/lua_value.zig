@@ -44,6 +44,29 @@ pub const LuaValue = union(LuaValueType) {
     LUA_TTHREAD: *LuaThread,
     LUA_TINTEGER: i64,
 
+    /// 比较两个Lua值是否相等
+    pub inline fn equal(self: LuaValue, b: LuaValue) bool {
+        return switch (self) {
+            .LUA_TNIL => b == .LUA_TNIL,
+            .LUA_TBOOLEAN => |a_bool| b.LUA_TBOOLEAN == a_bool,
+            .LUA_TSTRING => |a_str| std.mem.eql(u8, a_str, b.LUA_TSTRING),
+            .LUA_TINTEGER => |a_int| switch (b) {
+                .LUA_TINTEGER => b.LUA_TINTEGER == a_int,
+                .LUA_TNUMBER => @as(f64, @floatFromInt(a_int)) == b.LUA_TNUMBER,
+                else => false,
+            },
+            .LUA_TNUMBER => |a_num| switch (b) {
+                .LUA_TINTEGER => a_num == @as(f64, @floatFromInt(b.LUA_TINTEGER)),
+                .LUA_TNUMBER => a_num == b.LUA_TNUMBER,
+                else => false,
+            },
+            else => {
+                // TODO: 实现其他类型的比较
+                return false;
+            },
+        };
+    }
+
     pub fn less_than(self: LuaValue, other: LuaValue) bool {
         return switch (self) {
             .LUA_TSTRING => switch (other) {
@@ -84,26 +107,6 @@ pub const LuaValue = union(LuaValueType) {
         };
     }
 
-    pub fn compare_to(self: LuaValue, other: LuaValue) i32 {
-        return switch (self) {
-            .LUA_TSTRING => switch (other) {
-                .LUA_TSTRING => std.mem.compare(u8, self.LUA_TSTRING, other.LUA_TSTRING),
-                else => unreachable,
-            },
-            .LUA_TINTEGER => switch (other) {
-                .LUA_TINTEGER => @as(i32, @intCast(self.LUA_TINTEGER - other.LUA_TINTEGER)),
-                .LUA_TNUMBER => @as(i32, @intFromFloat(@as(f64, @floatFromInt(self.LUA_TINTEGER)) - other.LUA_TNUMBER)),
-                else => unreachable,
-            },
-            .LUA_TNUMBER => switch (other) {
-                .LUA_TINTEGER => @as(i32, @intFromFloat(self.LUA_TNUMBER - @as(f64, @floatFromInt(other.LUA_TINTEGER)))),
-                .LUA_TNUMBER => @as(i32, @intFromFloat(self.LUA_TNUMBER - other.LUA_TNUMBER)),
-                else => unreachable,
-            },
-            else => unreachable,
-        };
-    }
-
     pub fn to_bool(self: LuaValue) bool {
         return switch (self) {
             .LUA_TNIL => false,
@@ -136,19 +139,19 @@ pub fn lua_nil() LuaValue {
     return .LUA_TNIL;
 }
 
-pub fn lua_bool(value: bool) LuaValue {
+pub inline fn lua_bool(value: bool) LuaValue {
     return .{ .LUA_TBOOLEAN = value };
 }
 
-pub fn lua_integer(value: i64) LuaValue {
+pub inline fn lua_integer(value: i64) LuaValue {
     return .{ .LUA_TINTEGER = value };
 }
 
-pub fn lua_number(value: f64) LuaValue {
+pub inline fn lua_number(value: f64) LuaValue {
     return .{ .LUA_TNUMBER = value };
 }
 
-pub fn lua_string(value: []const u8) LuaValue {
+pub inline fn lua_string(value: []const u8) LuaValue {
     return .{ .LUA_TSTRING = value };
 }
 

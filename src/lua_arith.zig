@@ -144,27 +144,3 @@ pub fn arith_fn(a: LuaValue, b: LuaValue, op: BinaryOperator) !LuaValue {
     }
     return error.InvalidOperator;
 }
-
-// 辅助比较函数（与lua_value.zig中的实现一致）
-pub fn equal(a: LuaValue, b: LuaValue) bool {
-    if (@as(u8, @intFromEnum(a)) != @as(u8, @intFromEnum(b))) return false;
-    return switch (a) {
-        .LUA_TBOOLEAN => a.LUA_TBOOLEAN == b.LUA_TBOOLEAN,
-        .LUA_TNUMBER => a.LUA_TNUMBER == b.LUA_TNUMBER,
-        .LUA_TINTEGER => a.LUA_TINTEGER == b.LUA_TINTEGER,
-        .LUA_TSTRING => std.mem.eql(u8, a.LUA_TSTRING, b.LUA_TSTRING),
-        else => true,
-    };
-}
-pub fn less_than(a: LuaValue, b: LuaValue) bool {
-    return switch (a) {
-        .number => |an| switch (b) {
-            .number => |bn| an < bn,
-            else => false,
-        },
-        else => false,
-    };
-}
-pub fn less_equal(a: LuaValue, b: LuaValue) bool {
-    return less_than(a, b) or equal(a, b);
-}
