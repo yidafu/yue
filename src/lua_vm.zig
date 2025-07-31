@@ -23,7 +23,6 @@ pub const LuaVm = struct {
     pub fn init(allocator: std.mem.Allocator, size: usize, proto: binary_chunk.Prototype) LuaVm {
         return .{
             .state = LuaState.init(allocator, size, proto),
-            // 代理方法实现
         };
     }
 
@@ -66,7 +65,7 @@ pub const LuaVm = struct {
     }
 
     pub fn execute(self: *LuaVm, instr: Instruction) void {
-        switch (instr.opCode()) {
+        switch (instruction.op_code(instr)) {
             .OP_MOVE => self.op_move(instr),
             .OP_LOADK => self.op_load_k(instr),
             .OP_LOADKX => self.op_load_kx(instr),
@@ -176,7 +175,7 @@ pub const LuaVm = struct {
         _ = bx;
         // const bx = abx.bx;
         // const adjusted_a = a + 1;
-        const ax = self.patch().ax();
+        const ax = instruction.ax(self.patch());
         self.get_constant(ax);
         self.replace(a);
     }

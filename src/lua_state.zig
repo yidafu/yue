@@ -373,11 +373,11 @@ pub const LuaState = struct {
                 if (self.is_string(-1) and self.is_string(-2)) {
                     const s1 = self.to_string(-1);
                     const s2 = self.to_string(-2);
-                    std.debug.print("{s} + {s}", .{ s1, s2 });
+                    // std.debug.print("{s} + {s}\n", .{ s1, s2 });
                     self.pop(2);
 
-                    const new_str: []u8 = try std.mem.concat(self.allocator, u8, &.{ s1, s2 }) catch @panic("Out of memory");
-
+                    const new_str: []u8 = std.mem.concat(self.allocator, u8, &.{ s1, s2 }) catch @panic("Out of memory");
+                    // std.debug.print("new string => {s}\n", .{new_str});
                     self.push_string(new_str);
                     // self.stack.values.append() catch @panic("out of memory");
                 } else {
