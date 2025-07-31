@@ -182,7 +182,8 @@ pub const Prototype = struct {
     fn print_code(self: *const Prototype) void {
         for (self.codes, 0..) |code, index| {
             const line_info = if (self.line_info.len > 0) self.line_info[index] else 0;
-            const op_code = @as(OpCode, @enumFromInt(@as(u8, @truncate(code))));
+
+            const op_code = instruction.op_code(code);
             std.debug.print("\t{d}\t[{d}]\t{s:8}\t", .{ index + 1, line_info, op_code.info().desc });
             switch (op_code.info().mode) {
                 .IABC => {
