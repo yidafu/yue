@@ -15,7 +15,9 @@ pub const ListLuaValue = struct {
 
     /// 初始化指定容量的列表
     pub fn initCapacity(allocator: std.mem.Allocator, capacity: usize) !ListLuaValue {
-        return .{ .values = try std.ArrayList(LuaValue).initCapacity(allocator, capacity) };
+        return .{
+            .values = try std.ArrayList(LuaValue).initCapacity(allocator, capacity),
+        };
     }
 
     /// 释放列表资源
@@ -77,12 +79,14 @@ pub const LuaState = struct {
     stack: ListLuaValue,
     proto: binary_chunk.Prototype,
     pc: i32,
+    allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, size: usize, proto: binary_chunk.Prototype) LuaState {
         return .{
             .stack = ListLuaValue.initCapacity(allocator, size) catch unreachable,
             .proto = proto,
             .pc = 0,
+            .allocator = allocator,
         };
     }
 
@@ -111,6 +115,9 @@ pub const LuaState = struct {
         var i: i32 = 0;
         while (i < n) : (i += 1) {
             _ = self.stack.values.pop();
+            // if (value) |*v| {
+            //     v.deinit(self.allocator);
+            // }
         }
     }
 
@@ -156,7 +163,7 @@ pub const LuaState = struct {
         }
         const current_len = @as(i32, @intCast(self.stack.values.items.len));
         const n = current_len - new_top;
-        std.debug.print("set top {d} -> {d}", .{ n, new_top });
+        // std.debug.print("set top {d} -> {d}", .{ n, new_top });
         if (n > 0) {
             var i: i32 = 0;
             while (i < n) : (i += 1) {
@@ -313,7 +320,7 @@ pub const LuaState = struct {
     }
 
     pub fn push_number(self: *LuaState, value: f64) void {
-        std.debug.print("push_number {d}\n", .{value});
+        // std.debug.print("push_number {d}\n", .{value});
         self.stack.append(lua_value.lua_number(value)) catch unreachable;
     }
 
@@ -359,17 +366,20 @@ pub const LuaState = struct {
     /// 字符串拼接
     pub fn concat(self: *LuaState, n: i32) void {
         if (n == 0) {
-            self.stack.values.append(lua_value.lua_string("")) catch @panic("out of memory");
+            self.push_string("");
         } else if (n >= 2) {
             var i: i32 = 1;
             while (i < n) : (i += 1) {
                 if (self.is_string(-1) and self.is_string(-2)) {
                     const s1 = self.to_string(-1);
                     const s2 = self.to_string(-2);
-                    _ = self.stack.values.pop();
-                    _ = self.stack.values.pop();
-                    const new_str = std.fmt.allocPrint(self.stack.values.allocator, "{s}{s}", .{ s1, s2 }) catch @panic("out of memory");
-                    self.stack.values.append(lua_value.lua_string(new_str)) catch @panic("out of memory");
+                    std.debug.print("{s} + {s}", .{ s1, s2 });
+                    self.pop(2);
+
+                    const new_str: []u8 = try std.mem.concat(self.allocator, u8, &.{ s1, s2 }) catch @panic("Out of memory");
+
+                    self.push_string(new_str);
+                    // self.stack.values.append() catch @panic("out of memory");
                 } else {
                     @panic("concatenation error");
                 }

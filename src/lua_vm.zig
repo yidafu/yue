@@ -31,7 +31,7 @@ pub const LuaVm = struct {
     pub fn deinit(self: *LuaVm, allocator: std.mem.Allocator) void {
         self.state.deinit(allocator);
     }
-    pub fn get_pc(self: *LuaVm) i32 {
+    pub inline fn get_pc(self: *LuaVm) i32 {
         return self.state.pc;
     }
 
@@ -123,14 +123,14 @@ pub const LuaVm = struct {
         a += 1;
         b += 1;
         _ = c;
-        std.debug.print("op_move: {d} -> {d}\n", .{ b, a });
+        // std.debug.print("op_move: {d} -> {d}\n", .{ b, a });
 
         self.copy(b, a);
     }
 
     pub inline fn op_jump(self: *LuaVm, instr: Instruction) void {
         const a, const sBx = instruction.a_sbx(instr);
-        std.debug.print("op_jump: {d} -> {d}\n", .{ a, sBx });
+        // std.debug.print("op_jump: {d} -> {d}\n", .{ a, sBx });
         self.add_pc(sBx);
         if (a != 0) {
             unreachable; // Todo!
@@ -140,7 +140,7 @@ pub const LuaVm = struct {
     pub inline fn op_load_nil(self: *LuaVm, instr: Instruction) void {
         // const abc = instruction.a_b_c(instr);
         var a, const b, const c = instruction.a_b_c(instr);
-        std.debug.print("op_load_nil: {d} -> {d}\n", .{ a, b });
+        // std.debug.print("op_load_nil: {d} -> {d}\n", .{ a, b });
         a += 1;
         _ = c;
         self.push_nil();
@@ -202,10 +202,8 @@ pub const LuaVm = struct {
     }
 
     inline fn op_compare(self: *LuaVm, instr: Instruction, op: CompareOp) void {
-        const a, var b, var c = instruction.a_b_c(instr);
+        const a, const b, const c = instruction.a_b_c(instr);
         _ = a;
-        b += 1;
-        c += 1;
         self.get_rk(b);
         self.get_rk(c);
         if (self.compare(-2, -1, op)) {
@@ -288,6 +286,7 @@ pub const LuaVm = struct {
         const d = self.check_stack(n);
         _ = d;
         var j = b;
+
         while (j <= c) : (j += 1) {
             self.push_value(j);
         }

@@ -44,6 +44,12 @@ pub const LuaValue = union(LuaValueType) {
     LUA_TTHREAD: *LuaThread,
     LUA_TINTEGER: i64,
 
+    pub fn deinit(self: LuaValue, allocator: std.mem.Allocator) void {
+        switch (self) {
+            .LUA_TSTRING => |s| if (s.len > 0) allocator.free(s),
+            else => {},
+        }
+    }
     /// 比较两个Lua值是否相等
     pub inline fn equal(self: LuaValue, b: LuaValue) bool {
         return switch (self) {
@@ -136,7 +142,7 @@ pub const LuaValue = union(LuaValueType) {
 };
 
 pub fn lua_nil() LuaValue {
-    return .LUA_TNIL;
+    return .{ .LUA_TNIL = {} };
 }
 
 pub inline fn lua_bool(value: bool) LuaValue {

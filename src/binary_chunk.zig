@@ -40,7 +40,7 @@ pub const Header = struct {
 };
 
 pub const Constant = union(TagValue) {
-    NIL,
+    NIL: void,
     BOOL: bool,
     INTEGER: i64,
     NUMBER: f64,
@@ -85,32 +85,69 @@ pub const Prototype = struct {
 
     /// 释放原型及其子原型占用的内存
     pub fn deinit(self: *Prototype, allocator: std.mem.Allocator) void {
-        allocator.free(self.source);
-        allocator.free(self.codes);
+        if (@sizeOf(Prototype) == 0) return;
 
-        for (self.constants) |*constant| {
-            constant.deinit(allocator);
+        // 释放source: []const u8
+        if (self.source.len > 0) {
+            // std.debug.print("free source\n", .{});
+            allocator.free(self.source);
         }
-        allocator.free(self.constants);
 
-        allocator.free(self.upvalues);
-
-        for (self.protos) |*p| {
-            p.deinit(allocator);
+        // 释放codes: []u32
+        if (self.codes.len > 0) {
+            // std.debug.print("free codes\n", .{});
+            allocator.free(self.codes);
         }
-        allocator.free(self.protos);
 
-        allocator.free(self.line_info);
-
-        for (self.loc_vars) |*lv| {
-            allocator.free(lv.var_name);
+        // 释放constants: 先释放每个常量占用的内存，再释放数组
+        if (self.constants.len > 0) {
+            // std.debug.print("free constants\n", .{});
+            // for (self.constants) |c| {
+            //     allocator.free(c);
+            // }
+            // allocator.free(self.constants);
         }
-        allocator.free(self.loc_vars);
 
-        for (self.upvalue_names) |*name| {
-            allocator.free(name.*);
+        // 释放upvalues: []Upvalue
+        if (self.upvalues.len > 0) {
+            // std.debug.print("free upvalues\n", .{});
+            allocator.free(self.upvalues);
         }
-        allocator.free(self.upvalue_names);
+
+        // 递归释放protos
+        if (self.protos.len > 0) {
+            // std.debug.print("free protos {d}\n", .{self.protos.len});
+            for (self.protos) |*p| {
+                p.deinit(allocator);
+            }
+        }
+
+        if (self.line_info.len > 0) {
+            // std.debug.print("free line_info\n", .{});
+            allocator.free(self.line_info);
+        }
+
+        // 释放loc_vars: 先释放每个变量名，再释放数组
+        if (self.loc_vars.len > 0) {
+            // std.debug.print("free loc_vars\n", .{});
+            for (self.loc_vars) |*lv| {
+                if (lv.var_name.len > 0) {
+                    allocator.free(lv.var_name);
+                }
+            }
+            // allocator.free(self.loc_vars);
+        }
+
+        // 释放upvalue_names: 先释放每个名称，再释放数组
+        if (self.upvalue_names.len > 0) {
+            // std.debug.print("free upvalue_names\n", .{});
+            for (self.upvalue_names) |*name| {
+                if (name.len > 0) {
+                    allocator.free(name.*);
+                }
+            }
+            // allocator.free(self.upvalue_names);
+        }
     }
 
     /// 打印原型信息（包含嵌套函数）
@@ -209,7 +246,7 @@ pub fn const_str(value: []const u8) Constant {
 }
 
 pub fn const_nil() Constant {
-    return Constant{.NIL};
+    return Constant{ .NIL = {} };
 }
 
 pub fn loc_var(name: []const u8, s: u32, e: u32) LocVar {

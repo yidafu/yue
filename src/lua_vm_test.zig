@@ -36,7 +36,7 @@ fn new_vm_test(constants: []Constant) LuaVm {
 test "instruction move" {
     var empty_constants = [_]Constant{};
     var vm = new_vm_test(empty_constants[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     // vm.set_top(5);
     vm.push_number(1.0);
@@ -45,29 +45,24 @@ test "instruction move" {
     vm.push_number(4.0);
     vm.push_number(5.0);
 
-    vm.print_stack();
     const move_instr: Instruction = 0x8000C0;
 
     const value1 = vm.to_number(-2);
     try std.testing.expectEqual(value1, 4.0);
     vm.op_move(move_instr);
-    vm.print_stack();
 
     const value2 = vm.to_number(-2);
-    std.debug.print("value2: {d}\n", .{value2});
     try testing.expectEqual(value2, 2.0);
 }
 
 test "instruction jump" {
     var empty_constants = [_]Constant{};
     var vm = new_vm_test(empty_constants[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     const jump_instr: Instruction = 0x7FFF801E;
     vm.add_pc(1);
-    std.debug.print("pc: {d}\n", .{vm.get_pc()});
     vm.op_jump(jump_instr);
-    std.debug.print("pc: {d}\n", .{vm.get_pc()});
 
     try testing.expectEqual(vm.get_pc(), 0);
 }
@@ -75,7 +70,7 @@ test "instruction jump" {
 test "instruction load nil" {
     var empty_constants = [_]Constant{};
     var vm = new_vm_test(empty_constants[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     const load_nil_instr: Instruction = 0x2000004;
     vm.set_top(5);
@@ -89,13 +84,13 @@ test "instruction load nil" {
     const load_bool_instr: Instruction = 0x800083;
     vm.op_load_bool(load_bool_instr);
     try testing.expect(vm.is_bool(3));
-    vm.print_stack();
+    // vm.print_stack();
 }
 
 test "instruction load k" {
     var list = [_]Constant{ binary_chunk.const_int(1), binary_chunk.const_int(2), binary_chunk.const_str("foo") };
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(6);
     const load_nil_instr: Instruction = 0x4;
@@ -113,35 +108,29 @@ test "instruction load k" {
     try testing.expectEqual(vm.to_integer(3), 2);
     try testing.expectEqual(vm.to_integer(4), 2);
     try testing.expectEqualStrings(vm.to_string(5), "foo");
-    vm.print_stack();
     std.debug.print("load k \n", .{});
 }
 
 test "instruction binary operator" {
-    std.debug.print("binary operator 0\n", .{});
-
     var list = [_]Constant{
         binary_chunk.const_int(100),
     };
-    std.debug.print("binary operator 1\n", .{});
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
-    std.debug.print("binary operator 2\n", .{});
-    vm.print_stack();
+    defer vm.deinit(std.testing.allocator);
     vm.set_top(6);
-    vm.print_stack();
+    // vm.print_stack();
 
     const load_nil_instr: Instruction = 0x2000004;
     vm.op_load_nil(load_nil_instr);
-    vm.print_stack();
+    // vm.print_stack();
 
     const addition_instr: Instruction = 0xc0010d;
     vm.op_addition(addition_instr);
-    vm.print_stack();
+    // vm.print_stack();
 
     const value1 = vm.to_number(-2);
     try testing.expectEqual(value1, 100.0);
-    vm.print_stack();
+    // vm.print_stack();
 }
 
 test "instruction unary operator" {
@@ -149,7 +138,7 @@ test "instruction unary operator" {
         binary_chunk.const_int(1),
     };
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_k_instr: Instruction = 0x1;
@@ -167,7 +156,7 @@ test "instruction length operator" {
         binary_chunk.const_str("foo"),
     };
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_k_instr: Instruction = 0x1;
@@ -184,7 +173,7 @@ test "instruction concat operator" {
         binary_chunk.const_str("foo"),
     };
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_k_instr: Instruction = 0x1;
@@ -197,6 +186,7 @@ test "instruction concat operator" {
     vm.op_iconcat(iconcat_instr);
 
     const value1 = vm.to_string(2);
+    // vm.print_stack();
     try testing.expectEqualStrings(value1, "foofoo");
 }
 
@@ -204,17 +194,19 @@ test "instruction equal operator" {
     // .codes = &[_]u32{ 0x4, 0x40005f, 0x8000001e, 0x4043, 0x800043 },
     var list = [_]Constant{
         binary_chunk.const_str("foo"),
-        Constant{ .NIL = {} },
+        binary_chunk.const_nil(),
     };
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_nil_instr: Instruction = 0x4;
     vm.op_load_nil(load_nil_instr);
+    std.debug.print("pc 111 {d}\n", .{vm.get_pc()});
     const equal_instr1: Instruction = 0x40005f;
     vm.op_equal(equal_instr1);
-    try testing.expectEqual(vm.state.pc, 0);
+    std.debug.print("pc 222 {d}\n", .{vm.get_pc()});
+    try testing.expectEqual(vm.get_pc(), 0);
     const equal_instr2: Instruction = 0x40405f;
     vm.op_equal(equal_instr2);
     try testing.expectEqual(vm.state.pc, 1);
@@ -223,7 +215,7 @@ test "instruction equal operator" {
 test "instruction not" {
     var empty_constants = [_]Constant{};
     var vm = new_vm_test(empty_constants[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_nil_instr: Instruction = 0x4;
@@ -237,7 +229,7 @@ test "instruction not" {
 test "instruction testset" {
     var empty_constants = [_]Constant{};
     var vm = new_vm_test(empty_constants[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_nil_instr: Instruction = 0x1000004;
@@ -253,7 +245,7 @@ test "instruction testset" {
 test "instruction test" {
     var empty_constants = [_]Constant{};
     var vm = new_vm_test(empty_constants[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
 
     vm.set_top(5);
     const load_nil_instr: Instruction = 0x800004;
@@ -273,7 +265,7 @@ test "instruction for" {
         binary_chunk.const_int(2),
     };
     var vm = new_vm_test(list[0..]);
-    // defer vm.deinit(std.testing.allocator);
+    defer vm.deinit(std.testing.allocator);
     //  .loc_vars = &[_]binary_chunk.LocVar{
     //             lua_value.loc_var("j", 2, 9),
     //             lua_value.loc_var("(for index)", 5, 8),
@@ -300,7 +292,11 @@ test "instruction for" {
     const for_loop_instr: Instruction = 0x7fff4067;
     vm.op_for_loop(for_loop_instr);
 
+    vm.op_load_k(load_k_instr4);
+    vm.op_for_loop(for_loop_instr);
+
     // vm.print_stack();
     const value = vm.to_number(2);
+    // vm.print_stack();
     try testing.expectEqual(value, 3.0);
 }
