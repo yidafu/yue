@@ -6,3 +6,4 @@ c3/
 *.luac
 zig-out/
 zig-cache/
+.zig-cache/
