@@ -50,8 +50,48 @@ pub const LuaValue = union(LuaValueType) {
             else => {},
         }
     }
+
+    pub inline fn is_nil(self: LuaValue) bool {
+        return switch (self) {
+            .LUA_TNIL => return true,
+            else => return false,
+        };
+    }
+    pub inline fn is_boolean(self: LuaValue) bool {
+        return switch (self) {
+            .LUA_TBOOLEAN => return true,
+            else => return false,
+        };
+    }
+    pub inline fn is_number(self: LuaValue) bool {
+        return switch (self) {
+            .LUA_TNUMBER => return true,
+            .LUA_TINTEGER => return true,
+            else => return false,
+        };
+    }
+    pub inline fn is_string(self: LuaValue) bool {
+        return switch (self) {
+            .LUA_TSTRING => return true,
+            else => return false,
+        };
+    }
+    pub inline fn is_integer(self: LuaValue) bool {
+        return switch (self) {
+            .LUA_TINTEGER => return true,
+            else => return false,
+        };
+    }
+
+    pub inline fn is_table(self: LuaValue) bool {
+        return switch (self) {
+            .LUA_TTABLE => return true,
+            else => return false,
+        };
+    }
+
     /// 比较两个Lua值是否相等
-    pub inline fn equal(self: LuaValue, b: LuaValue) bool {
+    pub fn equal(self: LuaValue, b: LuaValue) bool {
         return switch (self) {
             .LUA_TNIL => b == .LUA_TNIL,
             .LUA_TBOOLEAN => |a_bool| b.LUA_TBOOLEAN == a_bool,
@@ -139,6 +179,37 @@ pub const LuaValue = union(LuaValueType) {
             else => error.TypeMismatch,
         };
     }
+
+    pub fn float_to_int(self: LuaValue) ?i64 {
+        return switch (self) {
+            .LUA_TNUMBER => @as(i64, @intFromFloat(self.LUA_TNUMBER)),
+            .LUA_TINTEGER => self.LUA_TINTEGER,
+            else => null,
+        };
+    }
+
+    pub fn to_string(self: LuaValue) []const u8 {
+        return switch (self) {
+            .LUA_TSTRING => self.LUA_TSTRING,
+            else => @panic("Value is not a string"),
+        };
+    }
+
+    pub fn to_number(self: LuaValue) f64 {
+        return switch (self) {
+            .LUA_TNUMBER => self.LUA_TNUMBER,
+            .LUA_TINTEGER => @as(f64, @floatFromInt(self.LUA_TINTEGER)),
+            else => @panic("Value is not a number"),
+        };
+    }
+
+    pub fn to_integer(self: LuaValue) i64 {
+        return switch (self) {
+            .LUA_TINTEGER => self.LUA_TINTEGER,
+            .LUA_TNUMBER => @as(i64, @intFromFloat(self.LUA_TNUMBER)),
+            else => @panic("Value is not an integer"),
+        };
+    }
 };
 
 pub fn lua_nil() LuaValue {
@@ -162,6 +233,6 @@ pub inline fn lua_string(value: []const u8) LuaValue {
 }
 
 // 其他类型定义（如LuaTable、LuaFunction、LuaThread）需要根据实际项目补充
-const LuaTable = struct {};
+const LuaTable = @import("lua_table.zig").LuaTable;
 const LuaFunction = struct {};
 const LuaThread = struct {};
