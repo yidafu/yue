@@ -43,7 +43,7 @@ pub const LuaTable = struct {
         };
     }
 
-    pub fn get(self: LuaTable, key: LuaValue) LuaValue {
+    pub fn get(self: *const LuaTable, key: LuaValue) LuaValue {
         const optional_key_int = key.float_to_int();
         if (optional_key_int) |key_int| {
             if (key_int > 0 and key_int <= self.arr.items.len) {
@@ -115,7 +115,7 @@ pub const LuaTable = struct {
             if (self.map.contains(lua_idx_int)) {
                 if (self.map.get(lua_idx_int)) |value| {
                     self.arr.append(value) catch unreachable;
-                    _ = self.map.remove(lua_idx_int);  // 从映射中删除
+                    _ = self.map.remove(lua_idx_int); // 从映射中删除
                 }
             } else {
                 break;

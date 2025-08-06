@@ -232,7 +232,16 @@ pub inline fn lua_string(value: []const u8) LuaValue {
     return .{ .LUA_TSTRING = value };
 }
 
-// 其他类型定义（如LuaTable、LuaFunction、LuaThread）需要根据实际项目补充
+pub inline fn lua_table(allocator: std.mem.Allocator, n_array: usize, n_record: usize) !LuaValue {
+    _ = n_record;
+    const table = try allocator.create(LuaTable);
+    table.* = try LuaTable.init(allocator, n_array);
+    return .{ .LUA_TTABLE = table };
+}
+pub inline fn type_of(value: LuaValue) LuaValueType {
+    return @as(LuaValueType, value);
+}
+// 已实现equal方法，用于比较两个LuaValue是否相等
 const LuaTable = @import("lua_table.zig").LuaTable;
 const LuaFunction = struct {};
 const LuaThread = struct {};

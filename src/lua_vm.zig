@@ -4,7 +4,8 @@ const lua_state = @import("./lua_state.zig");
 const binary_chunk = @import("./binary_chunk.zig");
 const lua_value = @import("./lua_value.zig");
 const instruction = @import("./instruction.zig");
-const lua_arith = @import("lua_arith.zig");
+const lua_arith = @import("./lua_arith.zig");
+const utils = @import("./utils.zig");
 
 const LuaValueType = lua_value.LuaValueType;
 const LuaState = lua_state.LuaState;
@@ -16,6 +17,7 @@ const a_sbx = instruction.a_sbx;
 pub const ArithOp = lua_arith.ArithOp;
 pub const CompareOp = lua_arith.CompareOp;
 
+const LFIELDS_PER_FLUSH: i32 = 50;
 pub const LuaVm = struct {
     state: LuaState,
 
@@ -73,11 +75,11 @@ pub const LuaVm = struct {
             .OP_LOADNIL => self.op_load_nil(instr),
             .OP_GETUPVAL => unreachable,
             .OP_GETTABUP => unreachable,
-            .OP_GETTABLE => unreachable,
+            .OP_GETTABLE => self.op_get_table(instr),
             .OP_SETTABUP => unreachable,
             .OP_SETUPVAL => unreachable,
-            .OP_SETTABLE => unreachable,
-            .OP_NEWTABLE => unreachable,
+            .OP_SETTABLE => self.op_set_table(instr),
+            .OP_NEWTABLE => self.op_new_table(instr),
             .OP_SELF => unreachable,
             .OP_ADD => self.op_addition(instr),
             .OP_SUB => self.op_subtract(instr),
@@ -109,7 +111,7 @@ pub const LuaVm = struct {
             .OP_FORPREP => self.op_for_prep(instr),
             .OP_TFORCALL => unreachable,
             .OP_TFORLOOP => unreachable,
-            .OP_SETLIST => unreachable,
+            .OP_SETLIST => self.op_set_list(instr),
             .OP_CLOSURE => unreachable,
             .OP_VARARG => unreachable,
             .OP_EXTRAARG => unreachable,
@@ -363,6 +365,44 @@ pub const LuaVm = struct {
         }
     }
 
+    pub inline fn op_new_table(self: *LuaVm, instr: Instruction) void {
+        var a, const b, const c = instr.a_b_c();
+        a += 1;
+        self.create_table(self, utils.float_byte_to_integer(b), utils.float_byte_to_integer(c));
+    }
+
+    pub inline fn op_get_table(self: *LuaVm, instr: Instruction) void {
+        var a, var b, const c = instr.a_b_c();
+        a += 1;
+        b += 1;
+        self.get_rk(c);
+        self.get_table(b);
+        self.replace(c);
+    }
+
+    pub inline fn op_set_list(self: *LuaVm, instr: Instruction) void {
+        var a, const b, var c = instr.a_b_c();
+        a += 1;
+        if (c > 0) {
+            c -= 1;
+        } else {
+            c = self.patch().ax();
+        }
+        var idx: i32 = c * LFIELDS_PER_FLUSH;
+        var j = 1;
+        while (j <= b) : (j += 1) {
+            idx += 1;
+            self.push_value(a + j);
+            self.set_index(a, idx);
+        }
+    }
+    pub inline fn op_set_table(self: *LuaVm, instr: Instruction) void {
+        var a, const b, const c = instr.a_b_c();
+        a += 1;
+        self.get_rk(b);
+        self.get_rk(c);
+        self.set_table(a);
+    }
     // ============== 代理方法实现 ==============
     pub fn get_top(self: *LuaVm) i32 {
         return self.state.get_top();
@@ -510,6 +550,39 @@ pub const LuaVm = struct {
 
     pub fn print_stack(self: *LuaVm) void {
         self.state.print_stack();
+    }
+
+    // ============== Table 相关代理方法 ==============
+    pub fn new_table(self: *LuaVm) !void {
+        try self.state.new_table();
+    }
+
+    pub fn create_table(self: *LuaVm, n_array: usize, n_record: usize) !void {
+        try self.state.create_table(n_array, n_record);
+    }
+
+    pub fn get_table(self: *LuaVm, idx: i32) LuaValueType {
+        return self.state.get_table(idx);
+    }
+
+    pub fn get_field(self: *LuaVm, idx: i32, key: []const u8) LuaValueType {
+        return self.state.get_field(idx, key);
+    }
+
+    pub fn get_index(self: *LuaVm, idx: i32, i: i64) LuaValueType {
+        return self.state.get_index(idx, i);
+    }
+
+    pub fn set_table(self: *LuaVm, idx: i32) void {
+        self.state.set_table(idx);
+    }
+
+    pub fn set_field(self: *LuaVm, idx: i32, key: []const u8) void {
+        self.state.set_field(idx, key);
+    }
+
+    pub fn set_index(self: *LuaVm, idx: i32) void {
+        self.state.set_index(idx);
     }
     // ============== 代理方法实现 ==============
 };

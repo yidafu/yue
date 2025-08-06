@@ -12,11 +12,12 @@ pub const CompareOp = lua_arith.CompareOp;
 /// Lua值列表类型，用于表示Lua栈
 pub const ListLuaValue = struct {
     values: std.ArrayList(LuaValue),
-
+    allocator: std.mem.Allocator,
     /// 初始化指定容量的列表
     pub fn initCapacity(allocator: std.mem.Allocator, capacity: usize) !ListLuaValue {
         return .{
             .values = try std.ArrayList(LuaValue).initCapacity(allocator, capacity),
+            .allocator = allocator,
         };
     }
 
@@ -26,8 +27,13 @@ pub const ListLuaValue = struct {
     }
 
     /// 添加元素到列表末尾
-    pub fn append(self: *ListLuaValue, value: LuaValue) !void {
-        try self.values.append(value);
+    pub fn append(self: *ListLuaValue, value: LuaValue) void {
+        self.values.append(value) catch unreachable;
+    }
+
+    /// 移除并返回列表末尾的元素
+    pub fn pop(self: *ListLuaValue) LuaValue {
+        return self.values.pop() orelse unreachable;
     }
 
     /// 检查索引是否有效（Lua索引从1开始）
@@ -121,6 +127,11 @@ pub const LuaState = struct {
         }
     }
 
+    /// 弹出一个元素并返回其值
+    pub fn pop_value(self: *LuaState) LuaValue {
+        return self.stack.values.pop() orelse lua_value.lua_nil();
+    }
+
     /// 复制元素（从from_index到to_index）
     pub fn copy(self: *LuaState, from_index: i32, to_index: i32) void {
         const from_value = self.stack.get_value(from_index);
@@ -129,7 +140,7 @@ pub const LuaState = struct {
 
     /// 替换指定索引的元素（弹出栈顶值并设置）
     pub fn replace(self: *LuaState, index: i32) void {
-        const value = self.stack.values.pop() orelse lua_value.lua_nil();
+        const value = self.pop_value();
         self.stack.set_value(index, value);
     }
 
@@ -141,7 +152,7 @@ pub const LuaState = struct {
     /// 移除指定索引的元素（通过旋转后弹出）
     pub fn remove(self: *LuaState, index: i32) void {
         self.rotate(index, -1);
-        self.pop(1);
+        _ = self.pop(1);
     }
 
     /// 旋转栈元素（实现区间反转）
@@ -195,7 +206,7 @@ pub const LuaState = struct {
         const abs_idx = self.stack.abs_index(index);
         if (self.stack.is_valid(abs_idx)) {
             const value = self.stack.get_value(abs_idx);
-            return @as(LuaValueType, value);
+            return lua_value.type_of(value);
         }
         return .LUA_TNONE;
     }
@@ -304,37 +315,41 @@ pub const LuaState = struct {
 
     pub fn push_value(self: *LuaState, index: i32) void {
         const value = self.stack.get_value(index);
-        self.stack.append(value) catch unreachable;
+        self.append(value);
     }
 
     pub fn push_nil(self: *LuaState) void {
-        self.stack.append(lua_value.lua_nil()) catch unreachable;
+        self.append(lua_value.lua_nil());
     }
 
     pub fn push_bool(self: *LuaState, value: bool) void {
-        self.stack.append(lua_value.lua_bool(value)) catch unreachable;
+        self.append(lua_value.lua_bool(value));
     }
 
     pub fn push_integer(self: *LuaState, value: i64) void {
-        self.stack.append(lua_value.lua_integer(value)) catch unreachable;
+        self.append(lua_value.lua_integer(value));
     }
 
     pub fn push_number(self: *LuaState, value: f64) void {
         // std.debug.print("push_number {d}\n", .{value});
-        self.stack.append(lua_value.lua_number(value)) catch unreachable;
+        self.append(lua_value.lua_number(value));
+    }
+
+    pub fn append(self: *LuaState, value: LuaValue) void {
+        self.stack.append(value);
     }
 
     pub fn push_string(self: *LuaState, value: []const u8) void {
-        self.stack.append(lua_value.lua_string(value)) catch unreachable;
+        self.append(lua_value.lua_string(value));
     }
 
     /// 执行算术操作
     pub fn arith(self: *LuaState, operator: ArithOp) void {
-        const b = self.stack.values.pop() orelse lua_value.lua_nil();
+        const b = self.pop_value();
         const a = (if (operator != .LUA_OPPOW and operator != .LUA_OPBNOT)
-            self.stack.values.pop()
+            self.pop_value()
         else
-            b) orelse lua_value.lua_nil();
+            b);
         const op = lua_arith.operator_map.get(operator) orelse @panic("invalid operator");
         const result = lua_arith.arith_fn(a, b, op) catch |err| {
             std.debug.print("Arithmetic error: {s}\n", .{@errorName(err)});
@@ -358,7 +373,8 @@ pub const LuaState = struct {
     pub fn len(self: *LuaState, idx: i32) void {
         const a = self.stack.get_value(idx);
         switch (a) {
-            .LUA_TSTRING => |s| self.stack.values.append(lua_value.lua_integer(@as(i64, @intCast(s.len)))) catch @panic("out of memory"),
+            .LUA_TSTRING => |s| self.push_integer(@as(i64, @intCast(s.len))),
+            .LUA_TTABLE => |t| self.push_integer(@as(i64, @intCast(t.len()))),
             else => @panic("length error"),
         }
     }
@@ -374,7 +390,7 @@ pub const LuaState = struct {
                     const s1 = self.to_string(-1);
                     const s2 = self.to_string(-2);
                     // std.debug.print("{s} + {s}\n", .{ s1, s2 });
-                    self.pop(2);
+                    _ = self.pop(2);
 
                     const new_str: []u8 = std.mem.concat(self.allocator, u8, &.{ s1, s2 }) catch @panic("Out of memory");
                     // std.debug.print("new string => {s}\n", .{new_str});
@@ -385,6 +401,70 @@ pub const LuaState = struct {
                 }
             }
         }
+    }
+
+    pub fn new_table(self: *LuaState) !void {
+        try self.create_table(0, 0);
+    }
+
+    pub fn create_table(self: *LuaState, n_array: usize, n_record: usize) !void {
+        const table = try lua_value.lua_table(self.allocator, n_array, n_record);
+        self.append(table);
+    }
+
+    pub fn get_table(self: *LuaState, idx: i32) LuaValueType {
+        const table = self.stack.get_value(idx);
+        const key = self.pop_value();
+        return self.get_table_internal(table, key);
+    }
+
+    fn get_table_internal(self: *LuaState, table: LuaValue, key: LuaValue) LuaValueType {
+        switch (table) {
+            .LUA_TTABLE => |t| {
+                const value = t.get(key);
+                self.append(value);
+                return lua_value.type_of(value);
+            },
+            else => @panic("not a table"),
+        }
+    }
+
+    pub fn get_field(self: *LuaState, idx: i32, key: []const u8) LuaValueType {
+        self.push_string(key);
+        return self.get_table(idx);
+    }
+
+    pub fn get_index(self: *LuaState, idx: i32, i: i64) LuaValueType {
+        const table = self.stack.get_value(idx);
+        return self.get_table_internal(table, lua_value.lua_integer(i));
+    }
+
+    pub fn set_table(self: *LuaState, idx: i32) void {
+        const table = self.stack.get_value(idx);
+        const value = self.pop_value();
+        const key = self.pop_value();
+        self.set_table_internal(table, key, value);
+    }
+
+    fn set_table_internal(_: *LuaState, table: LuaValue, key: LuaValue, value: LuaValue) void {
+        switch (table) {
+            .LUA_TTABLE => |t| {
+                t.put(key, value);
+            },
+            else => @panic("not a table"),
+        }
+    }
+
+    pub fn set_field(self: *LuaState, idx: i32, key: []const u8) void {
+        const table = self.stack.get_value(idx);
+        const value = self.pop_value();
+        self.set_table_internal(table, lua_value.lua_string(key), value);
+    }
+
+    pub fn set_index(self: *LuaState, idx: i32) void {
+        const table = self.stack.get_value(idx);
+        const value = self.pop_value();
+        self.set_table_internal(table, lua_value.lua_integer(@as(i64, idx)), value);
     }
 
     /// 打印Lua栈内容
