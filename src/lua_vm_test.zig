@@ -300,3 +300,57 @@ test "instruction for" {
     // vm.print_stack();
     try testing.expectEqual(value, 3.0);
 }
+
+test "instruction table" {
+    // 1       [1]     NEWTABLE        0  3  0          0x180000B
+    // 2       [1]        LOADK        1  -1            0x41
+    // 3       [1]        LOADK        2  -2            0x4081
+    // 4       [1]        LOADK        3  -3            0x80C1
+    // 5       [1]      SETLIST        0  3  1          0x180402B
+    // 6       [2]     SETTABLE        0  -3  -4        0x81C1000A
+    // 7       [3]     SETTABLE        0  -5  -6        0x82C1800A
+    // 8       [3]       RETURN        0  1             0x800026
+    var list = [_]Constant{
+        binary_chunk.const_str("a"),
+        binary_chunk.const_str("b"),
+        binary_chunk.const_str("c"),
+        binary_chunk.const_int(2),
+        binary_chunk.const_str("B"),
+        binary_chunk.const_str("foo"),
+        binary_chunk.const_str("Bar"),
+    };
+    var vm = new_vm_test(list[0..]);
+    defer vm.deinit(std.testing.allocator);
+    vm.set_top(4);
+
+    const i_list = [_]Instruction{
+        0x180000B, // NEWTABLE
+        0x41, // LOADK
+        0x4081, // LOADK
+        0x80C1, // LOADK
+        0x180402B, // SETLIST
+        0x81C1000A, // SETTABLE
+        0x82C1800A, // SETTABLE
+    };
+    vm.op_new_table(i_list[0]);
+    // vm.print_stack();
+    vm.op_load_k(i_list[1]);
+    vm.op_load_k(i_list[2]);
+    vm.op_load_k(i_list[3]);
+    // vm.print_stack();
+
+    vm.op_set_list(i_list[4]);
+    // vm.print_stack();
+
+    vm.op_set_table(i_list[5]);
+    vm.op_set_table(i_list[6]);
+    // vm.print_stack();
+
+    const table = vm.get_value(1).LUA_TTABLE;
+    const foo_value = table.get(lua_value.lua_string("foo"));
+    const value_1 = table.get(lua_value.lua_number(1));
+    const value_2 = table.get(lua_value.lua_number(2));
+    try testing.expectEqual("Bar", foo_value.LUA_TSTRING);
+    try testing.expectEqual("a", value_1.LUA_TSTRING);
+    try testing.expectEqual("B", value_2.LUA_TSTRING);
+}

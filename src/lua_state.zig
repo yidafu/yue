@@ -187,7 +187,9 @@ pub const LuaState = struct {
             }
         }
     }
-
+    pub fn get_value(self: *LuaState, idx: i32) LuaValue {
+        return self.stack.get_value(idx);
+    }
     /// 获取Lua值类型的名称
     pub fn type_name(_: *LuaState, lua_type: LuaValueType) []const u8 {
         return switch (lua_type) {
@@ -425,7 +427,7 @@ pub const LuaState = struct {
                 self.append(value);
                 return lua_value.type_of(value);
             },
-            else => @panic("not a table"),
+            else => unreachable,
         }
     }
 
@@ -440,6 +442,7 @@ pub const LuaState = struct {
     }
 
     pub fn set_table(self: *LuaState, idx: i32) void {
+        // std.debug.print("set table {d}\n", .{idx});
         const table = self.stack.get_value(idx);
         const value = self.pop_value();
         const key = self.pop_value();
@@ -447,24 +450,28 @@ pub const LuaState = struct {
     }
 
     fn set_table_internal(_: *LuaState, table: LuaValue, key: LuaValue, value: LuaValue) void {
+        // std.debug.print("set_table_internal {} {} {}\n", .{ lua_value.type_of(value), key, value });
         switch (table) {
             .LUA_TTABLE => |t| {
                 t.put(key, value);
             },
-            else => @panic("not a table"),
+            else => unreachable,
         }
     }
 
     pub fn set_field(self: *LuaState, idx: i32, key: []const u8) void {
         const table = self.stack.get_value(idx);
         const value = self.pop_value();
+        std.debug.print("set field idx({d})=> key({s})\n", .{ idx, key });
         self.set_table_internal(table, lua_value.lua_string(key), value);
     }
 
-    pub fn set_index(self: *LuaState, idx: i32) void {
-        const table = self.stack.get_value(idx);
+    pub fn set_index(self: *LuaState, table_idx: i32, key_idx: i32) void {
+        const table = self.stack.get_value(table_idx);
         const value = self.pop_value();
-        self.set_table_internal(table, lua_value.lua_integer(@as(i64, idx)), value);
+        std.debug.print("set index idx({d})=> i({d})\n", .{ table_idx, key_idx });
+
+        self.set_table_internal(table, lua_value.lua_integer(key_idx), value);
     }
 
     /// 打印Lua栈内容
@@ -472,6 +479,8 @@ pub const LuaState = struct {
         const top = self.get_top();
         var i: i32 = 1;
         while (i < top) : (i += 1) {
+            const value = self.stack.get_value(i);
+
             const value_type = self.type_of(i);
             switch (value_type) {
                 .LUA_TBOOLEAN => {
@@ -485,6 +494,11 @@ pub const LuaState = struct {
                 .LUA_TSTRING => {
                     const s = self.to_string(i);
                     std.debug.print("[{s}]", .{s});
+                },
+                .LUA_TTABLE => {
+                    // const local_type_name = self.type_name(value_type);
+                    // value.LUA_TTABLE.to_string(self.allocator);
+                    std.debug.print("[{s}]", .{value.LUA_TTABLE.to_string(self.allocator)});
                 },
                 else => {
                     const local_type_name = self.type_name(value_type);

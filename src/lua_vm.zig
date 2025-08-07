@@ -366,38 +366,44 @@ pub const LuaVm = struct {
     }
 
     pub inline fn op_new_table(self: *LuaVm, instr: Instruction) void {
-        var a, const b, const c = instr.a_b_c();
+        var a, const b, const c = a_b_c(instr);
         a += 1;
-        self.create_table(self, utils.float_byte_to_integer(b), utils.float_byte_to_integer(c));
+        _ = self.create_table(@as(usize, @intCast(utils.float_byte_to_integer(b))), @as(usize, @intCast(utils.float_byte_to_integer(c)))) catch unreachable;
+        self.replace(a);
     }
 
     pub inline fn op_get_table(self: *LuaVm, instr: Instruction) void {
-        var a, var b, const c = instr.a_b_c();
+        var a, var b, const c = a_b_c(instr);
         a += 1;
         b += 1;
         self.get_rk(c);
-        self.get_table(b);
+        _ = self.get_table(b);
         self.replace(c);
     }
 
     pub inline fn op_set_list(self: *LuaVm, instr: Instruction) void {
-        var a, const b, var c = instr.a_b_c();
+        var a, const b, var c = a_b_c(instr);
         a += 1;
         if (c > 0) {
             c -= 1;
         } else {
-            c = self.patch().ax();
+            c = instruction.ax(self.patch());
         }
         var idx: i32 = c * LFIELDS_PER_FLUSH;
-        var j = 1;
+        std.debug.print("set index a: {d} b: {d} c: {d}\n", .{ a, b, c });
+
+        var j: i32 = 1;
         while (j <= b) : (j += 1) {
             idx += 1;
+            std.debug.print("\n", .{});
+            self.print_stack();
             self.push_value(a + j);
+            std.debug.print("set index {d} {d}\n", .{ a, idx });
             self.set_index(a, idx);
         }
     }
     pub inline fn op_set_table(self: *LuaVm, instr: Instruction) void {
-        var a, const b, const c = instr.a_b_c();
+        var a, const b, const c = a_b_c(instr);
         a += 1;
         self.get_rk(b);
         self.get_rk(c);
@@ -447,7 +453,9 @@ pub const LuaVm = struct {
     pub fn type_name(self: *LuaVm, lua_type: LuaValueType) []const u8 {
         return self.state.type_name(lua_type);
     }
-
+    pub fn get_value(self: *LuaVm, index: i32) lua_value.LuaValue {
+        return self.state.get_value(index);
+    }
     pub fn type_of(self: *LuaVm, index: i32) LuaValueType {
         return self.state.type_of(index);
     }
@@ -558,6 +566,7 @@ pub const LuaVm = struct {
     }
 
     pub fn create_table(self: *LuaVm, n_array: usize, n_record: usize) !void {
+        std.debug.print("create_table: {d} {d}\n", .{ n_array, n_record });
         try self.state.create_table(n_array, n_record);
     }
 
@@ -581,8 +590,8 @@ pub const LuaVm = struct {
         self.state.set_field(idx, key);
     }
 
-    pub fn set_index(self: *LuaVm, idx: i32) void {
-        self.state.set_index(idx);
+    pub fn set_index(self: *LuaVm, idx: i32, i: i32) void {
+        self.state.set_index(idx, i);
     }
     // ============== 代理方法实现 ==============
 };

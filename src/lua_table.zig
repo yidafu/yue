@@ -132,4 +132,29 @@ pub const LuaTable = struct {
     pub fn len(self: LuaTable) usize {
         return self.arr.items.len;
     }
+
+    pub fn to_string(self: LuaTable, allocator: std.mem.Allocator) []u8 {
+        var builder = std.ArrayList(u8).init(allocator);
+
+        for (self.arr.items) |item| {
+            builder.appendSlice(item.fmt_string(allocator)) catch unreachable;
+            builder.append(',') catch unreachable;
+            builder.append(' ') catch unreachable;
+        }
+
+        var iterator = self.map.iterator();
+
+        while (iterator.next()) |entry| {
+            const key = entry.key_ptr.*;
+            const value = entry.value_ptr.*;
+            builder.appendSlice(key.fmt_string(allocator)) catch unreachable;
+            builder.append(':') catch unreachable;
+            builder.appendSlice(value.fmt_string(allocator)) catch unreachable;
+
+            builder.append(',') catch unreachable;
+            builder.append(' ') catch unreachable;
+        }
+
+        return std.fmt.allocPrint(allocator, "table{{{s}}}", .{builder.toOwnedSlice() catch unreachable}) catch unreachable;
+    }
 };

@@ -210,7 +210,27 @@ pub const LuaValue = union(LuaValueType) {
             else => @panic("Value is not an integer"),
         };
     }
+
+    pub fn fmt_string(self: LuaValue, allocator: std.mem.Allocator) []const u8 {
+        return switch (self) {
+            .LUA_TSTRING => self.LUA_TSTRING,
+            .LUA_TNIL => ("nil"),
+            .LUA_TNONE => "none",
+            .LUA_TBOOLEAN => if (self.LUA_TBOOLEAN) "true" else "false",
+            .LUA_TNUMBER => std.fmt.allocPrint(allocator, "{d}", .{self.LUA_TNUMBER}) catch unreachable,
+            .LUA_TINTEGER => std.fmt.allocPrint(allocator, "{d}", .{self.LUA_TNUMBER}) catch unreachable,
+            .LUA_TFUNCTION => "function",
+            .LUA_TTABLE => self.LUA_TTABLE.to_string(allocator),
+            .LUA_TUSERDATA => "userdata",
+            .LUA_TTHREAD => "thread",
+            .LUA_TLIGHTUSERDATA => "lightuserdata",
+        };
+    }
 };
+
+fn strSlice(str: []const u8) []u8 {
+    return str[0..];
+}
 
 pub fn lua_nil() LuaValue {
     return .{ .LUA_TNIL = {} };
