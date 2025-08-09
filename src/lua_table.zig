@@ -35,12 +35,27 @@ pub fn LuaValueHashMap() type {
 pub const LuaTable = struct {
     arr: std.ArrayList(LuaValue),
     map: LuaValueHashMap(),
+    allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, nArr: usize) !LuaTable {
         return LuaTable{
             .arr = try std.ArrayList(LuaValue).initCapacity(allocator, nArr),
             .map = LuaValueHashMap().init(allocator),
+            .allocator = allocator,
         };
+    }
+
+    pub fn deinit(self: *LuaTable, allocator: std.mem.Allocator) void {
+        for (self.arr.items) |v| {
+            v.deinit(allocator);
+        }
+        var it = self.map.iterator();
+        while (it.next()) |entry| {
+            entry.key_ptr.*.deinit(allocator);
+            entry.value_ptr.*.deinit(allocator);
+        }
+        self.arr.deinit();
+        self.map.deinit();
     }
 
     pub fn get(self: *const LuaTable, key: LuaValue) LuaValue {

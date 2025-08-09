@@ -22,7 +22,10 @@ pub const ListLuaValue = struct {
     }
 
     /// 释放列表资源
-    pub fn deinit(self: *ListLuaValue) void {
+    pub fn deinit(self: *ListLuaValue, allocator: std.mem.Allocator) void {
+        for (self.values.items) |item| {
+            item.deinit(allocator);
+        }
         self.values.deinit();
     }
 
@@ -97,7 +100,7 @@ pub const LuaState = struct {
     }
 
     pub fn deinit(self: *LuaState, allocator: std.mem.Allocator) void {
-        self.stack.deinit();
+        self.stack.deinit(allocator);
         self.proto.deinit(allocator);
     }
 
@@ -496,9 +499,11 @@ pub const LuaState = struct {
                     std.debug.print("[{s}]", .{s});
                 },
                 .LUA_TTABLE => {
+                    const str = value.LUA_TTABLE.to_string(self.allocator);
+                    defer self.allocator.free(str);
                     // const local_type_name = self.type_name(value_type);
                     // value.LUA_TTABLE.to_string(self.allocator);
-                    std.debug.print("[{s}]", .{value.LUA_TTABLE.to_string(self.allocator)});
+                    std.debug.print("[{s}]", .{str});
                 },
                 else => {
                     const local_type_name = self.type_name(value_type);

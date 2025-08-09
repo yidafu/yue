@@ -45,8 +45,10 @@ pub const LuaValue = union(LuaValueType) {
     LUA_TINTEGER: i64,
 
     pub fn deinit(self: LuaValue, allocator: std.mem.Allocator) void {
+        // std.debug.print("deinit LuaValue \n", .{});
         switch (self) {
-            .LUA_TSTRING => |s| if (s.len > 0) allocator.free(s),
+            // .LUA_TSTRING => |s| if (s.len > 0) allocator.free(s),
+            .LUA_TTABLE => |t| t.deinit(allocator),
             else => {},
         }
     }

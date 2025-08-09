@@ -390,15 +390,15 @@ pub const LuaVm = struct {
             c = instruction.ax(self.patch());
         }
         var idx: i32 = c * LFIELDS_PER_FLUSH;
-        std.debug.print("set index a: {d} b: {d} c: {d}\n", .{ a, b, c });
+        // std.debug.print("set index a: {d} b: {d} c: {d}\n", .{ a, b, c });
 
         var j: i32 = 1;
         while (j <= b) : (j += 1) {
             idx += 1;
-            std.debug.print("\n", .{});
-            self.print_stack();
+            // std.debug.print("\n", .{});
+            // self.print_stack();
             self.push_value(a + j);
-            std.debug.print("set index {d} {d}\n", .{ a, idx });
+            // std.debug.print("set index {d} {d}\n", .{ a, idx });
             self.set_index(a, idx);
         }
     }
